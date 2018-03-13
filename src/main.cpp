@@ -12,6 +12,8 @@
 using namespace std;
 
 int V, E;
+int num_procs; // Number of processors, assume n = 2^(2r)
+
 
 int main(int argc, char const *argv[])
 {
@@ -43,7 +45,7 @@ int main(int argc, char const *argv[])
 		for(int i = 0; line[i] != '\0'; i++)
 		{
 			if(line[i] != ' ')
-				adj[l].push_back(atoi(&line[i]));
+				adj[l].push_back(atoi(&line[i]) - 1);
 		}
 	}
 
@@ -52,10 +54,40 @@ int main(int argc, char const *argv[])
 	{		
 		for(vector<int>::iterator it = adj[i].begin(); it != adj[i].end(); it++)
 		{
-			printf("%d ", *it);
+			printf("%d ", (*it)+1);
 		}
 		printf("\n");
 	}
+
+
+	omp_set_num_threads(num_procs);
+
+	int sqrt_p = (int)(sqrt(num_procs));
+	int nthrds;
+	#pragma omp parallel default(none) shared(nthrds, num_procs, sqrt_p)
+	{
+		int pi, pj;
+
+		int tid = omp_get_thread_num();
+
+		#pragma omp single
+		{
+			nthrds = omp_get_num_threads();
+			if(nthrds != num_procs)
+			{
+				printf("Number of threads not OK; quitting\n");
+				exit(1);
+			}
+		}
+
+		// 2D Index of current processor
+		pi = tid / sqrt_p; pj = tid % sqrt_p;
+
+
+
+
+	}
+
 
 	return 0;
 }

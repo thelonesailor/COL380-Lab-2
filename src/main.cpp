@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <list>
 #include <utility>
+#include <algorithm>
 
 using namespace std;
 
@@ -127,20 +128,24 @@ for(int i=1;i<=sqrtp;++i)
 	}
 }
 
+pair<int,int> composed[2*n+2];
+
 int maxn=n+1;
 while(sp>1)
 {
 	while()//no significant decrease
 	{
+		// vertices in matching
 		vector<int> M[sp+1];
-		vector<pair<int> > Me[sp + 1];
-		int next[maxn+1];
+		// edges in matching
+		vector<pair<int,int> > Me[sp + 1];
+		int next[maxn+1]={};
 
 		for(int i=1;i<=sp;++i)
 		{
 			sort(Pe[i][i].begin(), Pe[i][i].end(), greater<pii>());
 			int l=Pe[i][i].size();
-			int taken	
+			int taken[maxn+1];	
 			for(int j=0;j<l;++j)
 			{
 				pair<int, int> temp=Pe[i][i][j].second;
@@ -154,7 +159,10 @@ while(sp>1)
 					//critical
 					next[v1]=maxn;
 					next[v2]=maxn;
+					composed[maxn]=mp(v1,v2);
+
 					++maxn;
+					taken[v1]=taken[v2]=1;
 				}
 			}
 		}
@@ -166,11 +174,82 @@ while(sp>1)
 			{
 				if(i!=j)
 				{
+					vector< pii > temp=Pe[i][j],t2;
+					int s=temp.size();
+					for(int k=0;k<s;++k)
+					{
+						int v1 = temp[k].second.first, v2 = temp[k].second.second;
+						if(next[v1]==0)
+						{next[v1]=v1;}
+						if(next[v2]==0)
+						{next[v2]=v1;}
+						int a=next[v1],b=next[v2];
+						// assert (a!=b);
 
+						int f=0;
+						for (int u = 0; u < t2.size(); ++u)
+						{
+							int a1 = t2[u].second.first, b1 = t2[u].second.second;
+							if(a==a1 && b==b1)
+							{
+								t2[u].first+=temp[k].first;
+								f=1;
+								break;
+							}
+							else if (a == b1 && b == a1)
+							{
+								t2[u].first += temp[k].first;
+								f=1;
+								break;
+							}
+						}
+						if(f==0)
+						t2.pb(mp(temp[k].first,mp(a,b)));	
+					}
+
+					Pe[i][j]=vector <pii> (t2);
 				}
 				else
 				{
+					vector<pii> temp = Pe[i][j], t2;
+					int s = temp.size();
+					for (int k = 0; k < s; ++k)
+					{
+						int v1 = temp[k].second.first, v2 = temp[k].second.second;
+						if (next[v1] == 0)
+						{
+							next[v1] = v1;
+						}
+						if (next[v2] == 0)
+						{
+							next[v2] = v1;
+						}
+						int a = next[v1], b = next[v2];
+						if(a==b)
+						continue;
 
+						int f = 0;
+						for (int u = 0; u < t2.size(); ++u)
+						{
+							int a1 = t2[u].second.first, b1 = t2[u].second.second;
+							if ((a == a1 && b == b1) || (a == b1 && b == a1))
+							{
+								t2[u].first += temp[k].first;
+								f = 1;
+								break;
+							}
+							else if (a == b1 && b == a1)
+							{
+								t2[u].first += temp[k].first;
+								f = 1;
+								break;
+							}
+						}
+						if (f == 0)
+						t2.pb(mp(temp[k].first, mp(a,b)));
+
+					}
+					Pe[i][j] = vector<pii>(t2);
 				}
 			}
 		}

@@ -45,26 +45,55 @@ bool sortbysecdesc(const pair<pair<int, int>,int> &a,
 }
 
 // k - current partition number. Use it to index into set_partition
-void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, int>, int, HASH >& edge_map, vector<int> adjm[]);
+void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, int>, int, HASH >& edge_map, vector<int> adjm[], vector<int>& v_wt);
+
+int check_pow_2(int n)
+{
+	if(n <= 0)
+		return 1;
+	if(n == 1)
+		return 0;
+	int x = n;
+	while(x > 1)
+	{
+		if(x%2 == 1)
+			return 1;
+		x /= 2;
+	}
+	return 0;
+}
 
 int main(int argc, char const *argv[])
 {
-	if(argc != 3)
+	if(argc != 4)
 	{
-		printf("Usage: ./main <infile> <outfile>\n");
+		printf("Usage: ./bisect <infile> <outfile> <num_partitions>\n");
+		exit(1);
+	}
+
+	num_partitions = atoi(argv[3]);
+	// Check - power of two
+	if(check_pow_2(num_partitions) == 1)
+	{
+		printf("ERROR - number of partitions must be a power of 2\n");
 		exit(1);
 	}
 
 	ifstream fin; ofstream fout;
 
 	fin.open(argv[1], ios::in);
-	fout.open(argv[2], ios::out);
+	fout.open(argv[2], ios::out);	
 
 	// Read number of vertices and edges
 	fin>>n>>m;
 	// printf("Number of vertices = %d, Number of edges = %d", V, E);
 	// Adj list
-	vector<int> adj[n];
+	vector<int> adj[n+1];
+
+	// NOTE - assuming, edge pair:first element <= second element
+	unordered_map< pair<int, int>, int, HASH > edge_map;  // Store edge weights
+	// Vertex weights also
+	vector<int> v_wt(n+1);
 
 	// Read edges
 	int l;
@@ -73,25 +102,49 @@ int main(int argc, char const *argv[])
 	getline(fin, line);
 	for(l = 1; l <=n; l++)
 	{
+		// Set vertex weight
+		v_wt[l] = 1;
 		getline(fin, line);
 		for(int i = 0; line[i] != '\0'; i++)
 		{
+			int ival = 0;
 			if(line[i] != ' ')
-				adj[l].push_back(atoi(&line[i]));
+			{
+				ival = atoi(&line[i]);
+				adj[l].push_back(ival);
+				int t1 = l; int t2 = ival;
+				if(t1 > t2)
+				{
+					int tmp = t1;
+					t1 = t2;
+					t2 = tmp;
+				}
+				// Insert new value OR make existing value 1
+				edge_map[make_pair(t1, t2)] = 1;
+			}
+			
+
 		}
 	}
 
 	// Verify
-	for (int i = 1; i <=n; ++i)
-	{		
-		for(vector<int>::iterator it = adj[i].begin(); it != adj[i].end(); it++)
-		{
-			printf("%d ", (*it));
-		}
-		printf("\n");
-	}
+	// for (int i = 1; i <=n; ++i)
+	// {		
+	// 	for(vector<int>::iterator it = adj[i].begin(); it != adj[i].end(); it++)
+	// 	{
+	// 		printf("%d ", (*it));
+	// 	}
+	// 	printf("\n");
+	// }
 
+	printf("Number of vertices = %d, number of edges = %d\n", n, m);
+	// printf("Following are edges with their weights:\n");
+	// for(auto it = edge_map.begin(); it != edge_map.end(); it++)
+		// printf("(%d, %d) -> %d\n", it->first.first, it->first.second, it->second);
+	
+	// exit(0);
 
+	/*
 	omp_set_num_threads(num_procs);
 
 	int sqrt_p = (int)(sqrt(num_procs));
@@ -117,39 +170,50 @@ int main(int argc, char const *argv[])
 		pi = tid / sqrt_p; pj = tid % sqrt_p;
 
 	}
+	*/
 
 //--------------------------------------------------------------------------------//
 
 	/*	Compute first bisection 
 	 *	This will be parallelized later
-	 */
-		
-
+	 */		
 	
 	int Vm, Em; 	// New V and E	
 
-	vector<int> adjm[Vm+1];							// Adjacency list
-	vector< pair<int, pair<int, int> > > edge_wt;	// Edge weights
-
-	// Store the initial set of vertices
-	unordered_set<int> S0;
-	for(int i = 1; i <= Vm; ++i)
-		S0.insert(i);
-
-	// NOTE - assuming, edge pair:first element <= second element
-	unordered_map< pair<int, int>, int, HASH > edge_map;  // Store edge weights
+	// vector<int> adjm[Vm+1];							// Adjacency list
+	// vector< pair<int, pair<int, int> > > edge_wt;	// Edge weights	
 	// Create map of edges to weights
-	for(int i = 0; i < edge_wt.size(); i++)
-	{
-		// edge_map[edge_wt[i].second] = edge_wt[i].first;
-		pair< pair<int, int>, int> ins (edge_wt[i].second, edge_wt[i].first);
-		edge_map.insert( ins );
-	}
+	// for(int i = 0; i < edge_wt.size(); i++)
+	// {
+	// 	// edge_map[edge_wt[i].second] = edge_wt[i].first;
+	// 	pair< pair<int, int>, int> ins (edge_wt[i].second, edge_wt[i].first);
+	// 	edge_map.insert( ins );
+	// }
 
-	// Local to function
-	unordered_map<int, int> partition;				// Store partition - 0 or 1			
 	// Sets to store partitions
 	unordered_set<int> set_partition[2*num_partitions-1];
+	
+	// Store the initial set of vertices
+	for(int i = 1; i <= n; ++i)
+		set_partition[0].insert(i);
+
+	// recursively call bisect
+	bisect(0, set_partition, edge_map, adj, v_wt);
+
+	// Print all partitions
+	printf("Printing %d partitions\n", num_partitions);
+	for(int i = num_partitions - 1; i < 2*num_partitions - 1; i++)
+	{
+		printf("Partition %d is size %d\n", i - num_partitions + 1, set_partition[i].size());
+		// for(auto it = set_partition[i].begin(); it != set_partition[i].end(); it++)
+			// printf("%d ", *it);
+		// printf("\n");
+	}
+
+	/*
+
+	// Local to function
+	unordered_map<int, int> partition;				// Store partition - 0 or 1	
 
 	// Store D values of vertices - this is now unordered_map
 	unordered_map<int, int> D;
@@ -232,20 +296,20 @@ int main(int argc, char const *argv[])
 					g_edge.push_back(make_pair(ij, gmap[ij]));
 					// r_gmap[gmap[ij]] = ij;
 					// ord_g.push_back(gmap[ij]);
-					/*if(count == 0)
-					{
-						max_gain = gmap[ij];
-						imax = i; jmax = j;
-					}
-					else
-					{
-						if(gmap[ij] > max_gain)
-						{
-							max_gain = gmap[ij];
-							imax = i; jmax = j;
-						}
-					}
-					count++;*/					
+					// if(count == 0)
+					// {
+					// 	max_gain = gmap[ij];
+					// 	imax = i; jmax = j;
+					// }
+					// else
+					// {
+					// 	if(gmap[ij] > max_gain)
+					// 	{
+					// 		max_gain = gmap[ij];
+					// 		imax = i; jmax = j;
+					// 	}
+					// }
+					// count++;					
 				}
 				else
 				{
@@ -401,19 +465,68 @@ int main(int argc, char const *argv[])
 
 	}while(gmax > 0);
 
+	*/
+
+
 //--------------------------------------------------------------------------------//
 
 	return 0;
 }
 
 // k - current partition number, S - set of ones in the current set
-void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, int>, int, HASH >& edge_map, vector<int> adjm[])
+void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, int>, int, HASH >& edge_map, vector<int> adjm[], vector<int> &v_wt)
 {
+	if(k >= num_partitions-1 && k < 2*num_partitions-1)
+		return;	// Base case
+	if(num_partitions == 1)
+		return;
 	// Local to function
-	unordered_map<int, int> partition;				// Store partition - 0 or 1			
+	unordered_map<int, int> partition;				// Store partition - 0 or 1
 
-	// TODO: COMPUTE PARTITION
+	int tot_wt = 0;
+	for(auto it = set_partition[k].begin(); it != set_partition[k].end(); it++)
+	{
+		tot_wt += v_wt[*it];
+		// Also set partition initially to zero
+		partition[*it] = 0;
+	}
+	
+	// COMPUTE PARTITION - do a BFS
+	queue<int> q;
+	// Get start node
+	int u = *(set_partition[k].begin());
+	partition[u] = 1;
+	q.push(u);
+	// Total weight
+	int bfs_wt = 1;
+	// Start BFS
+	int chk = 0;
+	while(bfs_wt <= tot_wt/2)
+	{
+		int f = q.front();
+        q.pop();
+ 
+        // cout << f << " ";
+ 
+        // Enqueue all adjacent of f and mark them visited 
+        for (auto i = adjm[f].begin(); i != adjm[f].end(); i++) {
+        	// Ensure - vertex is in the set
+            if (partition[*i] == 0 && set_partition[k].find(*i)!=set_partition[k].end()) {
+                q.push(*i);
+                partition[*i] = 1;
+                bfs_wt += v_wt[*i];
+                if(bfs_wt > tot_wt/2)
+                {
+                	chk = 1;
+                	break;
+                }
 
+            }
+        }
+        if(chk == 1)
+        	break;
+	}
+	// printf("\n");
 	// Store D values of vertices - this is now unordered_map
 	unordered_map<int, int> D;
 	// Total external cost
@@ -421,36 +534,10 @@ void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, 
 	// Store markings of vertices - marked is 1, unmarked is 0
 	unordered_map<int, int > mark_v;
 
-	// Compute D[v]. Iterate over vertices in set	
-	for(unordered_set<int>::iterator it = set_partition[k].begin(); it != set_partition[k].end(); it++)		
-	{
-		int i = *it;
-		mark_v[i] = 0;	// Initialize mark_v to zero
-		int I = 0;
-		int E = 0;
-		int part_v = partition[i];
-		// Search in j's adjacency list
-		for(int j = 0; j < adjm[i].size(); j++)
-		{
-			int j2 = adjm[i][j];
-			if(set_partition[k].find(j2) == set_partition[k].end())	// Should be in same set_partition[k] partition/induced subgraph
-				continue;
-			int part_w = partition[j2];
-			pair<int, int> e = make_pair(i, j2);
-			if(i > j2)
-				e = make_pair(j2, i);
-			int cost = edge_map[e];
-			if(part_v == part_w)
-				I += cost;
-			else
-				E += cost;					
-		}
-		D[i] = E - I;
-		T += E;
-	}
+	
 
 	// T has been counted twice, so divide by two - CHECK
-	T /= 2;	
+	// T /= 2;	
 
 	// Store two partitions of vertices
 	// unordered_set<int> set0;
@@ -475,25 +562,58 @@ void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, 
 	int gmax = 0;
 
 	// Kernighan-Lin algorithm follows. Can be converted to GGP, GGGP etc
+	int num_steps = 0;
 	do
 	{		
-		unordered_set<int>::iterator it1, it2;
+		// Compute D[v]. Iterate over vertices in set	
+		for(auto it = set_partition[k].begin(); it != set_partition[k].end(); it++)		
+		{
+			int i = *it;
+			mark_v[i] = 0;	// Initialize mark_v to zero
+			int I = 0;
+			int E = 0;
+			int part_v = partition[i];
+			// Search in j's adjacency list
+			for(int j = 0; j < adjm[i].size(); j++)
+			{
+				int j2 = adjm[i][j];
+				if(set_partition[k].find(j2) == set_partition[k].end())	// Should be in same set_partition[k] partition/induced subgraph
+					continue;
+				int part_w = partition[j2];
+				pair<int, int> e = make_pair(i, j2);
+				if(i > j2)
+					e = make_pair(j2, i);
+				int cost = edge_map[e];
+				if(part_v == part_w)
+					I += cost;
+				else
+					E += cost;					
+			}
+			D[i] = E - I;
+			// T += E;
+		}
+
+		// Computed D[v]
+
+		// unordered_set<int>::iterator it1, it2;
 		// Make a linked list
 		// list<int> ord_g_list;
 		// vector<int> ord_g;
 		vector<pair<pair<int, int>, int> > g_edge;	// Vector of pair-to-g values
-		for(it1 = set_partition[k1].begin(); it1 != set_partition[k1].end(); it1++)
+		for(auto it1 = set_partition[k1].begin(); it1 != set_partition[k1].end(); it1++)
 		{
-			for(it2 = set_partition[k2].begin(); it2 != set_partition[k2].end(); it2++)
+			for(auto it2 = set_partition[k2].begin(); it2 != set_partition[k2].end(); it2++)
 			{
 				int i = *it1; int j = *it2;
-				if(i > j)
-					i = *it2;
-					j = *it1;
+				
 				pair<int, int> ij = make_pair(i, j);
-				if(edge_map.find(ij) != edge_map.end())
+				pair<int, int> search_edge = make_pair(i, j);
+				if(i > j)
+					search_edge = make_pair(j, i);
+
+				if(edge_map.find(search_edge) != edge_map.end())
 				{
-					gmap[ij] = D[i] + D[j] - 2*edge_map[ij];
+					gmap[ij] = D[i] + D[j] - 2*edge_map[search_edge];
 					g_edge.push_back(make_pair(ij, gmap[ij]));
 					// r_gmap[gmap[ij]] = ij;
 					// ord_g.push_back(gmap[ij]);
@@ -537,9 +657,11 @@ void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, 
 		int vec_cur = 0;
 		int g_val;
 		// Set of swap pairs, with their gains
-		vector< pair< pair<int, int>, int > > set_pairs;		
+		vector< pair< pair<int, int>, int > > set_pairs;
+
 		while(num_marked <= 2*stop)
 		{
+			// printf("Iteration %d\n", num_marked);
 			int chk = 0;
 			int a, b;		
 			// Check for a proper g value that can be used, i.e. two unmarked vertices that can be removed
@@ -549,7 +671,7 @@ void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, 
 				// pair<int, int> p_v = r_gmap[g_val];
 				a = g_edge[vec_cur].first.first; b = g_edge[vec_cur].first.second;
 				// if(mark_v[a]|mark_v[b] == 0)	// Only if both are unmarked
-				if(!(mark_v[a]|mark_v[b]))
+				if((mark_v[a] == 0 && mark_v[b]) == 0)
 				{
 					chk = 1;
 					G += g_val;
@@ -569,6 +691,11 @@ void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, 
 			mark_v[a] = 1; mark_v[b] = 1;
 			// Add to set_pairs
 			set_pairs.push_back(make_pair(make_pair(a, b), g_val));
+
+			num_marked += 2;
+			if(num_marked > 2*stop)
+				break;
+
 			// Update D values	
 			pair<int, int> e1, e2;
 			int em1, em2;
@@ -602,6 +729,10 @@ void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, 
 			for(int lt = vec_cur; lt < g_edge.size(); lt++)
 			{
 				int a1 = g_edge[lt].first.first; int b1 = g_edge[lt].first.second;
+				// If either is marked, continue
+				if(mark_v[a1] == 1 || mark_v[b1] == 1)
+					continue;
+				pair<int, int> x = make_pair(a1, b1);
 				if(a1 > b1)
 				{
 					int tmp = a1;
@@ -609,19 +740,18 @@ void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, 
 					b1 = tmp;
 				}
 				em = 0;
-				if(edge_map.find(g_edge[lt].first) != edge_map.end())
-					em = edge_map[g_edge[lt].first];
+				if(edge_map.find(make_pair(a1, b1)) != edge_map.end())
+					em = edge_map[make_pair(a1, b1)];
 				g_edge[lt].second = D[a1] + D[b1] - 2*em;
-				gmap[g_edge[lt].first] = g_edge[lt].second; // Update gmap also; maybe not needed
+				gmap[x] = g_edge[lt].second; // Update gmap also; maybe not needed
 			}
 
 			// Sort again, beginning from vec_cur
-			sort(g_edge.begin()+vec_cur, g_edge.end(), sortbysecdesc);
-
-			num_marked += 2;
+			sort(g_edge.begin()+vec_cur, g_edge.end(), sortbysecdesc);			
 		}
+
 		// Now, find gmax
-		int g_sum =set_pairs[0].second;
+		int g_sum = set_pairs[0].second;
 		gmax = set_pairs[0].second;
 		int kmax = 0;
 		int cnt = 1;
@@ -643,15 +773,14 @@ void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, 
 			{
 				int ak = set_pairs[i].first.first; int bk = set_pairs[i].first.second;
 				// Swap ak and bk
-				set_partition[k1].erase(ak); set_partition[k1].insert(bk);
+				set_partition[k1].erase(ak); set_partition[k1].insert(bk);				
 				set_partition[k2].erase(bk); set_partition[k2].insert(ak);
+				partition[ak] = 1; partition[bk] = 0;
 			}
 		}
-
-	}while(gmax > 0);
-
-	if(k > num_partitions && k < 2*num_partitions-1)
-		return;	// Base case
-	bisect(2*k+1, set_partition, edge_map, adjm);
-	bisect(2*k+2, set_partition, edge_map, adjm);
+		num_steps++;	
+	}while(gmax > 0 && num_steps <= 10);
+	
+	bisect(2*k+1, set_partition, edge_map, adjm, v_wt);
+	bisect(2*k+2, set_partition, edge_map, adjm, v_wt);
 }

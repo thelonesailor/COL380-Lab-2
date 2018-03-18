@@ -224,7 +224,7 @@ int main(int argc, char const *argv[])
 
 	// Convert list of edges to adjacency list and weight map
 	vector<int, pair<int, int> > edges;
-	vector<int> adj_list[n+1];
+	vector<vector<int> > adj_list(n+1);
 	unordered_map< pair<int, int>, int, HASH > edge_map2;  // Store edge weights
 
 	for(auto it = edges.begin(); it != edges.end(); it++)

@@ -22,6 +22,8 @@ using namespace std;
 #define mp make_pair
 #define pb push_back
 
+#define pii pair<int, int>
+
 #define A 0
 #define B 1
 
@@ -220,274 +222,22 @@ int main(int argc, char const *argv[])
 
 	exit(0);
 
-	// Convert list of edges to adjacency list
-	vector<pair<int, int> > edges;
+	// Convert list of edges to adjacency list and weight map
+	vector<int, pair<int, int> > edges;
 	vector<int> adj_list[n+1];
+	unordered_map< pair<int, int>, int, HASH > edge_map2;  // Store edge weights
 
 	for(auto it = edges.begin(); it != edges.end(); it++)
 	{
-		adj_list[it->first].push_back(it->second);
-		adj_list[it->second].push_back(it->first);
+		adj_list[it->second.first].push_back(it->second.second);
+		adj_list[it->second.second].push_back(it->second.first);
+		pii e = make_pair(it->second.first, it->second.second);
+		if(it->second.first > it->second.second)
+			e = make_pair(it->second.second, it->second.first);
+		edge_map2[e] = it->first;
 	}
 
-	return 0;
-
-	/*
-
-	// Local to function
-	unordered_map<int, int> partition;				// Store partition - 0 or 1	
-
-	// Store D values of vertices - this is now unordered_map
-	unordered_map<int, int> D;
-	// Total external cost
-	int T = 0;
-	// Store markings of vertices - marked is 1, unmarked is 0
-	unordered_map<int, int > mark_v;
-
-	// Compute D[v]. Iterate over vertices in set	
-	for(unordered_set<int>::iterator it = S0.begin(); it != S0.end(); it++)		
-	{
-		int i = *it;
-		mark_v[i] = 0;	// Initialize mark_v to zero
-		int I = 0;
-		int E = 0;
-		int part_v = partition[i];
-		// Search in j's adjacency list
-		for(int j = 0; j < adjm[i].size(); j++)
-		{
-			int j2 = adjm[i][j];
-			if(S0.find(j2) == S0.end())	// Should be in same S0 partition/induced subgraph
-				continue;
-			int part_w = partition[j2];
-			pair<int, int> e = make_pair(i, j2);
-			if(i > j2)
-				e = make_pair(j2, i);
-			int cost = edge_map[e];
-			if(part_v == part_w)
-				I += cost;
-			else
-				E += cost;					
-		}
-		D[i] = E - I;
-		T += E;
-	}
-
-	// T has been counted twice, so divide by two - CHECK
-	T /= 2;	
-
-	// Store two partitions of vertices
-	unordered_set<int> set0;
-	unordered_set<int> set1;
-
-	for(unordered_set<int>::iterator it = S0.begin(); it != S0.end(); it++)
-	{
-		int cset = partition[*it];
-		if(cset == 1)
-			set0.insert(*it);
-		else
-			set1.insert(*it);
-	}
-
-	// int G = 0;	// Total gain	
-	// gmap is a map
-	unordered_map <pair<int, int>, int, HASH > gmap;
-	// unordered_map <int, pair<int, int> > r_gmap; // Inverse gmap
-	
-	int gmax = 0;
-
-	// Kernighan-Lin algorithm follows. Can be converted to GGP, GGGP etc
-	do
-	{		
-		unordered_set<int>::iterator it1, it2;
-		// Make a linked list
-		// list<int> ord_g_list;
-		// vector<int> ord_g;
-		vector<pair<pair<int, int>, int> > g_edge;	// Vector of pair-to-g values
-		for(it1 = set0.begin(); it1 != set0.end(); it1++)
-		{
-			for(it2 = set1.begin(); it2 != set1.end(); it2++)
-			{
-				int i = *it1; int j = *it2;
-				if(i > j)
-					i = *it2;
-					j = *it1;
-				pair<int, int> ij = make_pair(i, j);
-				if(edge_map.find(ij) != edge_map.end())
-				{
-					gmap[ij] = D[i] + D[j] - 2*edge_map[ij];
-					g_edge.push_back(make_pair(ij, gmap[ij]));
-					// r_gmap[gmap[ij]] = ij;
-					// ord_g.push_back(gmap[ij]);
-					// if(count == 0)
-					// {
-					// 	max_gain = gmap[ij];
-					// 	imax = i; jmax = j;
-					// }
-					// else
-					// {
-					// 	if(gmap[ij] > max_gain)
-					// 	{
-					// 		max_gain = gmap[ij];
-					// 		imax = i; jmax = j;
-					// 	}
-					// }
-					// count++;					
-				}
-				else
-				{
-					gmap[ij] = D[i] + D[j];
-					g_edge.push_back(make_pair(ij, gmap[ij]));
-				}				
-			}
-		}
-		
-		// Sort
-		// sort(ord_g.begin(), ord_g.end());
-		// Sort by g values
-		sort(g_edge.begin(), g_edge.end(), sortbysecdesc);
-		// Push all sorted elements into list (doubly linked)
-		// for(vector<int>::iterator i = 0; i != ord_g.end(); ++i)
-			// ord_g_list.push_back(*i);
-
-		int num_marked = 0;
-		int stop = set0.size();
-		if(set1.size() < stop)
-			stop = set1.size();
-		int G = 0;
-		// See - where in the vector we are
-		int vec_cur = 0;
-		int g_val;
-		// Set of swap pairs, with their gains
-		vector< pair< pair<int, int>, int > > set_pairs;		
-		while(num_marked <= 2*stop)
-		{
-			int chk = 0;
-			int a, b;
-			
-			// Check for a proper g value that can be used, i.e. two unmarked vertices that can be removed
-			while(chk == 0)
-			{
-				g_val = g_edge[vec_cur].second; // First unmarked value WILL be highest
-				// pair<int, int> p_v = r_gmap[g_val];
-				a = g_edge[vec_cur].first.first; b = g_edge[vec_cur].first.second;
-				// if(mark_v[a]|mark_v[b] == 0)	// Only if both are unmarked
-				if(!(mark_v[a]|mark_v[b]))
-				{
-					chk = 1;
-					G += g_val;
-				}
-				vec_cur++;
-			}
-
-			// Assume - i is in partition 0, j in 1
-			if(partition[a] == B)	// Means partition[b] == A
-			{
-				int tmp = a;
-				a = b;
-				b = a;
-			}
-
-			// Mark a and b
-			mark_v[a] = 1; mark_v[b] = 1;
-			// Add to set_pairs
-			set_pairs.push_back(make_pair(make_pair(a, b), g_val));
-			// Update D values
-			for(int i = 1; i <= Vm; i++)
-			for(unordered_set<int>::iterator it = S0.begin(); it != S0.end(); it++)
-			{
-				int i = *it;
-				if(mark_v[i] == 1)
-					continue;	// If marked, continue
-				if(partition[i] == A)
-				{
-					pair<int, int> e1, e2;
-					if(i <= a)
-						e1 = make_pair(i, a);
-					else
-						e1 = make_pair(a, i);
-					if(i <= b)
-						e2 = make_pair(i, b);
-					else
-						e2 = make_pair(b, i);
-					int em1 = 0; int em2 = 0;
-					if(edge_map.find(e1) != edge_map.end())
-						em1 = edge_map[e1];
-					if(edge_map.find(e2) != edge_map.end())
-						em2 = edge_map[e2];
-					D[i] += 2*(em1 - em2);
-				}
-				else
-				{
-					pair<int, int> e1, e2;
-					if(i <= a)
-						e1 = make_pair(i, a);
-					else
-						e1 = make_pair(a, i);
-					if(i <= b)
-						e2 = make_pair(i, b);
-					else
-						e2 = make_pair(b, i);
-					int em1 = 0; int em2 = 0;
-					if(edge_map.find(e1) != edge_map.end())
-						em1 = edge_map[e1];
-					if(edge_map.find(e2) != edge_map.end())
-						em2 = edge_map[e2];
-					D[i] += 2*(em2 - em1);
-				}
-			}
-
-			// Update the values in the list, after updating D's
-			for(int lt = vec_cur; lt < g_edge.size(); lt++)
-			{
-				int a1 = g_edge[lt].first.first; int b1 = g_edge[lt].first.second;
-				if(a1 > b1)
-				{
-					int tmp = a1;
-					a1 = b1;
-					b1 = tmp;
-				}
-				int em = 0;
-				if(edge_map.find(g_edge[lt].first) != edge_map.end())
-					em = edge_map[g_edge[lt].first];
-				g_edge[lt].second = D[a1] + D[b1] - 2*em;
-				gmap[g_edge[lt].first] = g_edge[lt].second; // Update gmap also; maybe not needed
-			}
-
-			// Sort again, beginning from vec_cur
-			sort(g_edge.begin()+vec_cur, g_edge.end(), sortbysecdesc);
-
-			num_marked += 2;
-		}
-		// Now, find gmax
-		int g_sum =set_pairs[0].second;
-		gmax = set_pairs[0].second;
-		int kmax = 0;
-		int cnt = 1;
-		for(vector<pair<pair<int, int>, int> >::iterator it = set_pairs.begin()+1; it != set_pairs.end(); ++it)
-		{
-			g_sum += it->second;
-			if(g_sum > gmax)
-			{
-				gmax = g_sum;
-				kmax = cnt;
-			}
-			cnt++;
-		}
-
-		// Swap all values till done
-		if(gmax > 0)
-		{
-			for(int i = 0; i < kmax; ++i)
-			{
-				int ak = set_pairs[i].first.first; int bk = set_pairs[i].first.second;
-				set0.erase(ak);	set0.insert(bk);
-				set1.erase(bk); set1.insert(ak);
-			}
-		}
-
-	}while(gmax > 0);
-
-	*/
+	return 0;	
 
 
 //--------------------------------------------------------------------------------//

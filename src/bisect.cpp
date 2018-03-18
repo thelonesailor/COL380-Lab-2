@@ -45,7 +45,7 @@ bool sortbysecdesc(const pair<pair<int, int>,int> &a,
 }
 
 // k - current partition number. Use it to index into set_partition
-void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, int>, int, HASH >& edge_map, vector<int> adjm[], vector<int>& v_wt);
+void bisect(int k, vector<unordered_set<int> > &set_partition, unordered_map< pair<int, int>, int, HASH >& edge_map, vector<vector<int> > &adjm, vector<int>& v_wt);
 
 int check_pow_2(int n)
 {
@@ -93,7 +93,7 @@ int main(int argc, char const *argv[])
 	}
 	// printf("Number of vertices = %d, Number of edges = %d", V, E);
 	// Adj list
-	vector<int> adj[n+1];
+	vector<vector<int> > adj(n+1);
 
 	// NOTE - assuming, edge pair:first element <= second element
 	unordered_map< pair<int, int>, int, HASH > edge_map;  // Store edge weights
@@ -195,8 +195,11 @@ int main(int argc, char const *argv[])
 	// 	edge_map.insert( ins );
 	// }
 
+
+
+
 	// Sets to store partitions
-	unordered_set<int> set_partition[2*num_partitions-1];
+	vector<unordered_set<int>> set_partition(2*num_partitions-1);
 	
 	// Store the initial set of vertices
 	for(int i = 1; i <= n; ++i)
@@ -214,6 +217,20 @@ int main(int argc, char const *argv[])
 			// printf("%d ", *it);
 		// printf("\n");
 	}
+
+	exit(0);
+
+	// Convert list of edges to adjacency list
+	vector<pair<int, int> > edges;
+	vector<int> adj_list[n+1];
+
+	for(auto it = edges.begin(); it != edges.end(); it++)
+	{
+		adj_list[it->first].push_back(it->second);
+		adj_list[it->second].push_back(it->first);
+	}
+
+	return 0;
 
 	/*
 
@@ -479,7 +496,7 @@ int main(int argc, char const *argv[])
 }
 
 // k - current partition number, S - set of ones in the current set
-void bisect(int k, unordered_set<int> set_partition[], unordered_map< pair<int, int>, int, HASH >& edge_map, vector<int> adjm[], vector<int> &v_wt)
+void bisect(int k, vector<unordered_set<int> > &set_partition, unordered_map< pair<int, int>, int, HASH >& edge_map, vector<vector<int> > &adjm, vector<int> &v_wt)
 {
 	if(k >= num_partitions-1 && k < 2*num_partitions-1)
 		return;	// Base case

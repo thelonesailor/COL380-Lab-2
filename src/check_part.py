@@ -6,13 +6,13 @@ if(len(sys.argv) != 2):
 
 part_map = {}
 
-fin = open(sys.agrv[1], 'r')
+fin = open(sys.argv[1], 'r')
 
-line = f.readline()
+line = fin.readline()
 
 lsp = line.split()
 
-tot_num = len(slp)
+tot_num = len(lsp)
 for w in lsp:
 	num = int(w)
 	if(num in part_map):
@@ -30,7 +30,7 @@ for x in part_map:
 
 x_max = max(l); x_min = min(l)
 
-thresh = abs(double(x_min) - double(x_max))*1.0/double(tot_num)
+thresh = abs(float(x_min) - float(x_max))*1.0/float(tot_num)
 
 if(thresh <= 0.05):
 	print("PASS")

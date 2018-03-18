@@ -1,0 +1,1 @@
+g++ -std=c++11 -g -fopenmp -o par main.cpp

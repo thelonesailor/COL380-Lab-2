@@ -1,1 +1,1 @@
-g++ -std=c++11 -g -fopenmp -o par main.cpp
+g++ -std=c++11 -O3 -fopenmp -o par main.cpp

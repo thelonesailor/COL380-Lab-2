@@ -121,11 +121,11 @@ void bisect(int k, vector<set<int>> &set_partition, unordered_map<pair<int, int>
 		ifstream fin;
 		ofstream fout;
 
-		fin.open(argv[1], ios::in);
-		fout.open(argv[2], ios::out);
-		// fin.open("sample_test_file", ios::in);
+		// fin.open(argv[1], ios::in);
+		// fout.open(argv[2], ios::out);
+		fin.open("sample_test_file", ios::in);
 		// fin.open("in2.txt", ios::in);
-		// fout.open("out1.txt", ios::out);
+		fout.open("out1.txt", ios::out);
 
 		// Read number of vertices and edges
 		fin >> n >> m;
@@ -409,17 +409,45 @@ while(sp>1)
 		for(int i=1;i<=sp;++i)
 		{
 			// cout<<"sorting started"<<endl;
-			sort(Pe[i][i].begin(), Pe[i][i].end(), greater<pii>());
-			// random_shuffle(Pe[i][i].begin(), Pe[i][i].end());
+			// sort(Pe[i][i].begin(), Pe[i][i].end(), greater<pii>());
+
+
+			vector<vector<pair<int,int>>> adj_list(2*sz + 1);
+			// unordered_map<pair<int, int>, int, HASH> edge_map2; // Store edge weights
+
+			for (auto it = Pe[i][i].begin(); it != Pe[i][i].end(); it++)
+			{
+				int a = it->second.first,b = it->second.second;
+				if(a==b)
+				{cout<<"error\n";continue;}
+				adj_list[a].push_back(mp(b,it->first));
+				adj_list[b].push_back(mp(a,it->first));
+
+				// pair<int, int> e;
+				// if (a > b)
+				// swap(a,b);
+				// e = make_pair(a,b);
+			}
+
 
 			// cout<<"sorted"<<endl;
 
-			int l=Pe[i][i].size();
+			// int l=Pe[i][i].size();
 			vector<bool> taken(maxn+1,0);	
-			for(int j=0;j<l;++j)
+			for(int j=1;j<maxn;++j)
 			{
+				if(adj_list[i].size()==0)
+				continue;
 				// pair<int, int> temp=Pe[i][i][j].second;
-				int v1 = Pe[i][i][j].second.first, v2 = Pe[i][i][j].second.second;
+				int v1 = j,v2,mw=-1;
+				for(int u=0;u<adj_list[v1].size();++u)
+				{
+					int w = adj_list[v1][u].second;
+					if (w>mw)
+					{mw=w;
+						v2 = adj_list[v1][u].first;}
+				}
+
 				if(v1>v2)
 				{swap(v1,v2);}
 				if(taken[v1]==0 && taken[v2]==0)
@@ -793,13 +821,13 @@ for (int i = 1; i <= sp; ++i)
 
 	//calculate any partitioning
 
-	for (auto it = s.begin(); it != s.end(); it++)
-	{
-		part[i].insert(*it);
-		++i;
-		if(i==k)i=0;
-		// cout<<" W= "<<W[*it]<<endl;
-	}
+	// for (auto it = s.begin(); it != s.end(); it++)
+	// {
+	// 	part[i].insert(*it);
+	// 	++i;
+	// 	if(i==k)i=0;
+	// 	// cout<<" W= "<<W[*it]<<endl;
+	// }
 
 	// for (int i = 0; i < k; ++i)
 	// {
@@ -808,43 +836,40 @@ for (int i = 1; i <= sp; ++i)
 	// cout<<endl;
 	//till here
 
-
 	//input given: W,list of edges P[1][1],vp[1]
 
-	// vector<pair<int, pair<int, int>>> edges2;
-	// edges2.insert(edges2.begin(), Pe[1][1].begin(), Pe[1][1].end());
-	// vector<vector<int>> adj_list(maxn + 1);
-	// unordered_map<pair<int, int>, int, HASH> edge_map2; // Store edge weights
+	vector<pair<int, pair<int, int>>> edges2;
+	edges2.insert(edges2.begin(), Pe[1][1].begin(), Pe[1][1].end());
+	vector<vector<int>> adj_list(maxn + 1);
+	unordered_map<pair<int, int>, int, HASH> edge_map2; // Store edge weights
 
-	// for (auto it = edges2.begin(); it != edges2.end(); it++)
-	// {
-	// 	int a = it->second.first, b = it->second.second;
-	// 	adj_list[a].push_back(b);
-	// 	adj_list[b].push_back(a);
+	for (auto it = edges2.begin(); it != edges2.end(); it++)
+	{
+		int a = it->second.first, b = it->second.second;
+		adj_list[a].push_back(b);
+		adj_list[b].push_back(a);
 
-	// 	if (a > b)
-	// 	{
-	// 		swap(a, b);
-	// 	}
-	// 	edge_map2[mp(a, b)] = it->first;
-	// }
+		if (a > b)
+		{
+			swap(a, b);
+		}
+		edge_map2[mp(a, b)] = it->first;
+	}
 
-	// vector<set<int>> set_partition(2 * num_partitions - 1);
+	vector<set<int>> set_partition(2 * num_partitions - 1);
 
 	// // Store the initial set of vertices
-	// for (auto i = vp[1].begin(); i != vp[1].end(); ++i)
-	// 	set_partition[0].insert(*i);
+	for (auto i = vp[1].begin(); i != vp[1].end(); ++i)
+		set_partition[0].insert(*i);
 
 	// recursively call bisect
-	// bisect(0, set_partition, edge_map2, adj_list, W);
+	bisect(0, set_partition, edge_map2, adj_list, W);
 
-	// //output taken: part.
-
-
-	// for (int i = 0; i < k; ++i)
-	// {
-	// 	part[i] = set_partition[i + num_partitions - 1];
-	// }
+	//output taken: part.
+	for (int i = 0; i < k; ++i)
+	{
+		part[i] = set_partition[i + num_partitions - 1];
+	}
 
 	for (int i = 0; i < k; ++i)
 	{
@@ -861,7 +886,6 @@ for (int i = 1; i <= sp; ++i)
 			partition[*it] = i;
 		}
 	}
-
 
 	cout << phase << endl;
 	cout << "Uncoarsening started" << endl;
